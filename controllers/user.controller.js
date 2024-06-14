@@ -3,13 +3,18 @@ const bcrypt = require("bcrypt")
 
 const registerUser = async (req, res) => {
     try {
-        const { username, password, fullName, email } = req.body
+        let { username, password, fullName, email } = req.body
 
         /* Must have all fields, otherwise we throw a 400 error */
         if (!("fullName" in req.body) ||  !("username" in req.body) || !("password" in req.body) || !("email" in req.body)) {
             return res.status(400).json("Must have all fields")
         }
-        
+
+        /* This will update everything to lowercase so it can be compared */
+        username = username.toLowerCase()
+        fullName = fullName.toLowerCase()
+        email = email.toLowerCase()
+
         const existingUser = await User.findOne({ username: username })
         const existingEmail = await User.findOne({ email: email})
 
