@@ -59,11 +59,14 @@ const loginUser = async (req, res) => {
         if (email) user = await User.findOne({ email: email })
         else user = await User.findOne({ username: username })
         
-        const dbPassword = user.password
-        bcrypt.compare(password, dbPassword).then((match) => {
-            if (!match) return res.status(400).json("Password does not match. Try again")
-            else return res.status(200).send({ user: user, message: "Successfully logged in!"})
-        })
+        if (user) {
+            const dbPassword = user.password
+            bcrypt.compare(password, dbPassword).then((match) => {
+                if (!match) return res.status(400).json("Password does not match. Try again")
+                else return res.status(200).json({ user: user, message: "Successfully logged in!"})
+            })
+        }
+        else return res.status(400).json("Error: User does not exist")
     }
     catch(error) {
         return res.status(400).json({ message: error.message })
