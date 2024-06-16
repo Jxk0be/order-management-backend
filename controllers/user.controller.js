@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt")
 const registerUser = async (req, res) => {
     try {
         let { username, password, fullName, email } = req.body
+        let user = null
 
         /* Must have all fields, otherwise we throw a 400 error */
         if (!("fullName" in req.body) ||  !("username" in req.body) || !("password" in req.body) || !("email" in req.body)) {
@@ -26,15 +27,17 @@ const registerUser = async (req, res) => {
         /* Bcrypt Hashing Algo for passwords, 10 salts */
         bcrypt.hash(password, 10)
         .then(async (hash) => {
-            await User.create({
+            user = await User.create({
                 username: username,
                 password: hash,
                 fullName: fullName,
                 email: email
             })
-        })
 
-        return res.status(200).json(`${username} successfully registered!`)
+            /* At this point, we can now return success if the user created, else we send a 400 */
+            if (user) return res.status(200).json({ user: user, message: "Successfully registered!"})
+            else return res.status(400).json("Could not register account. Try again")
+        })
     }
     catch(error) {
         return res.status(400).json({ message: error.message })
@@ -58,7 +61,6 @@ const loginUser = async (req, res) => {
         bcrypt.compare(password, dbPassword).then((match) => {
             if (!match) return res.status(400).json("Password does not match. Try again")
             else return res.status(200).send({ user: user, message: "Successfully logged in!"})
-
         })
     }
     catch(error) {
