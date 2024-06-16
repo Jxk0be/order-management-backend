@@ -37,7 +37,7 @@ const registerUser = async (req, res) => {
             })
 
             /* At this point, we can now return success if the user created, else we send a 400 */
-            if (user) return res.status(200).json({ user: user, message: "Successfully registered!"})
+            if (user) return res.status(200).json({ message: "Successfully registered!", user: user})
             else return res.status(400).json("Could not register account. Try again")
         })
     }
@@ -74,7 +74,7 @@ const loginUser = async (req, res) => {
                         maxAge: 60*60*24*1000
                     })
 
-                    return res.status(200).json({ user: user, message: "Successfully logged in!"})
+                    return res.status(200).json({ message: "Successfully logged in!", user: user})
                 }
             })
         }
