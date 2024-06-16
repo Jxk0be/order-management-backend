@@ -27,7 +27,3 @@ mongoose.connect(process.env.MONGO_URI)
 .catch(() => {
     console.log("Error connecting to MongoDB")
 })
-
-app.get("/", (req, res) => {
-    res.send("Testing server")
-})

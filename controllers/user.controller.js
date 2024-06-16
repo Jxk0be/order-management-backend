@@ -1,5 +1,6 @@
 const User = require("../models/user.model")
 const bcrypt = require("bcrypt")
+const { createTokens } = require("../JWT")
 
 const registerUser = async (req, res) => {
     try {
@@ -10,6 +11,8 @@ const registerUser = async (req, res) => {
         if (!("fullName" in req.body) ||  !("username" in req.body) || !("password" in req.body) || !("email" in req.body)) {
             return res.status(400).json("Must have all fields")
         }
+
+        if (username.includes(" ")) return res.status(400).json("Username cannot contain a space")
 
         /* This will update everything to lowercase so it can be compared */
         username = username.toLowerCase()
@@ -32,6 +35,9 @@ const registerUser = async (req, res) => {
                 fullName: fullName,
                 email: email
             })
+
+            // TODO: Figure out what to do from here (research needed)
+            const accessToken = createTokens(user)
 
             /* At this point, we can now return success if the user created, else we send a 400 */
             if (user) return res.status(200).json({ user: user, message: "Successfully registered!"})
