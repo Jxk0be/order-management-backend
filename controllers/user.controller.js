@@ -20,9 +20,7 @@ const registerUser = async (req, res) => {
         const existingEmail = await User.findOne({ email: email})
 
         /* If user exists already, they can't register as that username */
-        if (existingUser || existingEmail) {
-            return res.status(400).json(`${existingEmail ? email : username} already exists`)
-        }
+        if (existingUser || existingEmail) return res.status(400).json(`${existingEmail ? email : username} already exists`)
 
         /* Bcrypt Hashing Algo for passwords, 10 salts */
         bcrypt.hash(password, 10)
@@ -46,17 +44,21 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { username, password, email } = req.body
-        let user = null
+        let { username, password, email } = req.body
+        let user = {}
 
         /* Password is required or at least email or username */
         if (!("password" in req.body)) return res.status(400).json("You must enter a password")
         if (!("username" in req.body) && !("email" in req.body)) return res.status(400).json("You must enter your username or email")
 
+        /* This will update everything to lowercase so it can be compared */
+        if (username) username = username.toLowerCase()
+        if (email) email = email.toLowerCase()
+        
         /* Find user either by email or by username */
         if (email) user = await User.findOne({ email: email })
         else user = await User.findOne({ username: username })
-
+        
         const dbPassword = user.password
         bcrypt.compare(password, dbPassword).then((match) => {
             if (!match) return res.status(400).json("Password does not match. Try again")

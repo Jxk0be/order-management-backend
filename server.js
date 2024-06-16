@@ -2,12 +2,14 @@ const express = require("express")
 const app = express()
 const mongoose = require("mongoose")
 const userRoute = require("./routes/user.route")
+const cookieParser = require("cookie-parser")
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000
 
 app.use(express.json())
 app.use("/api/user", userRoute)
+app.use(cookieParser())
 
 mongoose.connect(process.env.MONGO_URI)
 .then(() => {
