@@ -19,9 +19,10 @@ const registerUser = async (req, res) => {
         const existingUser = await User.findOne({ username: username })
         const existingEmail = await User.findOne({ email: email})
 
-        /* If user exists already, they can't register as that username */
+        /* If user exists already, they can't register as that username. Also, password must be at least 8 characters long */
         if (existingUser || existingEmail) return res.status(400).json(`${existingEmail ? email : username} already exists`)
-
+        if (password.length < 8) return res.status(400).json("Password must be at least 8 characters long")
+        
         /* Bcrypt Hashing Algo for passwords, 10 salts */
         bcrypt.hash(password, 10)
         .then(async (hash) => {
