@@ -1,6 +1,6 @@
 const User = require("../models/user.model")
 const bcrypt = require("bcrypt")
-const { createTokens } = require("../JWT")
+const { createToken } = require("../JWT")
 
 const registerUser = async (req, res) => {
     try {
@@ -36,9 +36,6 @@ const registerUser = async (req, res) => {
                 email: email
             })
 
-            // TODO: Figure out what to do from here (research needed)
-            const accessToken = createTokens(user)
-
             /* At this point, we can now return success if the user created, else we send a 400 */
             if (user) return res.status(200).json({ user: user, message: "Successfully registered!"})
             else return res.status(400).json("Could not register account. Try again")
@@ -70,7 +67,15 @@ const loginUser = async (req, res) => {
             const dbPassword = user.password
             bcrypt.compare(password, dbPassword).then((match) => {
                 if (!match) return res.status(400).json("Password does not match. Try again")
-                else return res.status(200).json({ user: user, message: "Successfully logged in!"})
+                else {
+                    const accessToken = createToken(user)
+
+                    res.cookie("accessToken", accessToken, {
+                        maxAge: 60*60*24*1000
+                    })
+
+                    return res.status(200).json({ user: user, message: "Successfully logged in!"})
+                }
             })
         }
         else return res.status(400).json("Error: User does not exist")
