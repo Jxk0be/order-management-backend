@@ -45,7 +45,7 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     try {
         let { username, password, email } = req.body
-        let user = {}
+        let user = null
 
         /* Password is required or at least email or username */
         if (!("password" in req.body)) return res.status(400).json("You must enter a password")
