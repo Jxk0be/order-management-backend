@@ -35,7 +35,7 @@ function isValidPassword(password) {
     return true;
 }
 
-function isValidName(name) {
+const isValidName = (name) => {
     if (typeof name !== 'string' || name.trim().split(/\s+/).length !== 2) return false;
     
     const validAlphaRegex = /^[A-Za-z]+ [A-Za-z]+$/;
