@@ -1,6 +1,46 @@
 const User = require("../models/user.model")
 const bcrypt = require("bcrypt")
+const nodeMailer = require("nodemailer")
 const { createToken } = require("../JWT")
+
+const isValidEmail = (email) => {
+    if (email.length > 256) return false;
+    
+    let emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+}
+
+const isValidUsername = (username) => {
+    if (username.length > 20 || username.includes(" ")) return false;
+    
+    let usernameRegex = /^[a-zA-Z0-9_]+$/;
+    return usernameRegex.test(username);
+}
+
+function isValidPassword(password) {
+    if (typeof password !== 'string' || password.length < 8 || password.length > 100) return false;
+
+    const lowercaseRegex = /[a-z]/;
+    const uppercaseRegex = /[A-Z]/;
+    const digitRegex = /[0-9]/;
+    const specialCharRegex = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
+
+    if (!lowercaseRegex.test(password) ||
+        !uppercaseRegex.test(password) ||
+        !digitRegex.test(password) ||
+        !specialCharRegex.test(password)) {
+        return false;
+    }
+
+    return true;
+}
+
+function isValidName(name) {
+    if (typeof name !== 'string' || name.trim().split(/\s+/).length !== 2) return false;
+    
+    const validAlphaRegex = /^[A-Za-z]+ [A-Za-z]+$/;
+    return validAlphaRegex.test(name.trim());
+}
 
 const registerUser = async (req, res) => {
     try {
@@ -12,7 +52,11 @@ const registerUser = async (req, res) => {
             return res.status(400).json("Must have all fields")
         }
 
-        if (username.includes(" ")) return res.status(400).json("Username cannot contain a space")
+        /* Making sure all the data is valid */
+        if (!isValidName(fullName)) return res.status(400).json("Name not valid (must be first and last, no special characters or numbers)")
+        if (!isValidUsername(username)) return res.status(400).json("Username is not valid")
+        if (!isValidEmail(email)) return res.status(400).json("Email is not valid")
+        if (!isValidPassword(password)) return res.status(400).json("Password must contain 1 lowercase character, 1 uppercase character, 1 digit, and 1 special character")
 
         /* This will update everything to lowercase so it can be compared */
         username = username.toLowerCase()
@@ -24,7 +68,6 @@ const registerUser = async (req, res) => {
 
         /* If user exists already, they can't register as that username. Also, password must be at least 8 characters long */
         if (existingUser || existingEmail) return res.status(400).json(`${existingEmail ? email : username} already exists`)
-        if (password.length < 8 || password.length > 256) return res.status(400).json("Password must be at least 8 characters long and cannot exceed 256 characters")
         
         /* Bcrypt Hashing Algo for passwords, 10 salts */
         bcrypt.hash(password, 10)
@@ -62,7 +105,7 @@ const loginUser = async (req, res) => {
         /* Find user either by email or by username */
         if (email) user = await User.findOne({ email: email })
         else user = await User.findOne({ username: username })
-        
+
         if (user) {
             const dbPassword = user.password
             bcrypt.compare(password, dbPassword).then((match) => {
