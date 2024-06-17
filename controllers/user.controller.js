@@ -1,7 +1,8 @@
 const User = require("../models/user.model")
 const bcrypt = require("bcrypt")
-const nodeMailer = require("nodemailer")
 const { createToken } = require("../JWT")
+const { sendVerificationEmail } = require("../email")
+const crypto = require("crypto")
 
 const isValidEmail = (email) => {
     if (email.length > 256) return false;
@@ -76,11 +77,23 @@ const registerUser = async (req, res) => {
                 username: username,
                 password: hash,
                 fullName: fullName,
-                email: email
+                email: email,
+                emailToken: crypto.randomBytes(64).toString("hex"),
+                verifiedEmail: false
             })
 
             /* At this point, we can now return success if the user created, else we send a 400 */
-            if (user) return res.status(200).json({ message: "Successfully registered!", user: user})
+            if (user) {
+                sendVerificationEmail(user)
+                return res.status(200).json({ 
+                    message: "Successfully registered!", 
+                    user: {
+                        username: user.username,
+                        email: user.email,
+                        id: user._id
+                    }
+                })
+            }
             else return res.status(400).json("Could not register account. Try again")
         })
     }
@@ -117,7 +130,14 @@ const loginUser = async (req, res) => {
                         maxAge: 60*60*24*1000
                     })
 
-                    return res.status(200).json({ message: "Successfully logged in!", user: user})
+                    return res.status(200).json({ 
+                        message: "Successfully logged in!", 
+                        user: {
+                            username: user.username,
+                            email: user.email,
+                            id: user._id
+                        }
+                    })
                 }
             })
         }
@@ -137,8 +157,36 @@ const getProfile = async (req, res) => {
     }
 }
 
+const verifyEmail = async (req, res) => {
+    try {
+        const emailToken = req.body.emailToken
+        if (!emailToken) return res.status(400).json("Email Token not found...")
+
+        const user = await User.findOne({ emailToken: emailToken })
+        
+        if (user) {
+            user.verifiedEmail = true
+            console.log("HERE")
+            await user.save()
+            console.log("HERE")
+            return res.status(200).json({ 
+                message: "Successfully verified email!", 
+                user: {
+                    username: user.username,
+                    email: user.email,
+                    id: user._id
+                }
+            })
+        }
+        else return res.status(400).json("Email verification failed, invalid token")
+    }
+    catch(error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
 module.exports = {
     registerUser,
     loginUser,
-    getProfile
+    getProfile,
+    verifyEmail
 }
