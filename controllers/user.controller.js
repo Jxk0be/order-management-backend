@@ -160,15 +160,16 @@ const getProfile = async (req, res) => {
 const verifyEmail = async (req, res) => {
     try {
         const emailToken = req.body.emailToken
+        
         if (!emailToken) return res.status(400).json("Email Token not found...")
 
         const user = await User.findOne({ emailToken: emailToken })
         
         if (user) {
             user.verifiedEmail = true
-            console.log("HERE")
+
             await user.save()
-            console.log("HERE")
+
             return res.status(200).json({ 
                 message: "Successfully verified email!", 
                 user: {
