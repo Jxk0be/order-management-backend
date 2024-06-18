@@ -136,7 +136,8 @@ const loginUser = async (req, res) => {
                             username: user.username,
                             email: user.email,
                             id: user._id
-                        }
+                        },
+                        accessToken: accessToken
                     })
                 }
             })
