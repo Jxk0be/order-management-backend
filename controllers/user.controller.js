@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt")
 const { createToken } = require("../JWT")
 const { sendVerificationEmail } = require("../email")
 const crypto = require("crypto")
+const { send } = require("process")
 
 const isValidEmail = (email) => {
     if (email.length > 256) return false;
@@ -50,14 +51,14 @@ const registerUser = async (req, res) => {
 
         /* Must have all fields, otherwise we throw a 400 error */
         if (!("fullName" in req.body) ||  !("username" in req.body) || !("password" in req.body) || !("email" in req.body)) {
-            return res.status(400).json("Must have all fields")
+            return res.status(400).json("Error: Must have all fields")
         }
 
         /* Making sure all the data is valid */
-        if (!isValidName(fullName)) return res.status(400).json("Name not valid (must be first and last, no special characters or numbers)")
-        if (!isValidUsername(username)) return res.status(400).json("Username is not valid")
-        if (!isValidEmail(email)) return res.status(400).json("Email is not valid")
-        if (!isValidPassword(password)) return res.status(400).json("Password must contain 1 lowercase character, 1 uppercase character, 1 digit, and 1 special character")
+        if (!isValidName(fullName)) return res.status(400).json("Error: Name not valid (must be first and last, no special characters or numbers)")
+        if (!isValidUsername(username)) return res.status(400).json("Error: Username is not valid")
+        if (!isValidEmail(email)) return res.status(400).json("Error: Email is not valid")
+        if (!isValidPassword(password)) return res.status(400).json("Error: Password must contain 1 lowercase character, 1 uppercase character, 1 digit, and 1 special character")
 
         /* This will update everything to lowercase so it can be compared */
         username = username.toLowerCase()
@@ -68,7 +69,7 @@ const registerUser = async (req, res) => {
         const existingEmail = await User.findOne({ email: email})
 
         /* If user exists already, they can't register as that username. Also, password must be at least 8 characters long */
-        if (existingUser || existingEmail) return res.status(400).json(`${existingEmail ? email : username} already exists`)
+        if (existingUser || existingEmail) return res.status(400).json(`Error: ${existingEmail ? email : username} already exists`)
         
         /* Bcrypt Hashing Algo for passwords, 10 salts */
         bcrypt.hash(password, 10)
@@ -94,7 +95,7 @@ const registerUser = async (req, res) => {
                     }
                 })
             }
-            else return res.status(400).json("Could not register account. Try again")
+            else return res.status(400).json("Error: Could not register account. Try again")
         })
     }
     catch(error) {
@@ -108,8 +109,8 @@ const loginUser = async (req, res) => {
         let user = null
 
         /* Password is required or at least email or username */
-        if (!("password" in req.body)) return res.status(400).json("You must enter a password")
-        if (!("username" in req.body) && !("email" in req.body)) return res.status(400).json("You must enter your username or email")
+        if (!("password" in req.body)) return res.status(400).json("Error: You must enter a password")
+        if (!("username" in req.body) && !("email" in req.body)) return res.status(400).json("Error: You must enter your username or email")
 
         /* This will update everything to lowercase so it can be compared */
         if (username) username = username.toLowerCase()
@@ -120,9 +121,11 @@ const loginUser = async (req, res) => {
         else user = await User.findOne({ username: username })
 
         if (user) {
+            if (!user.verifiedEmail) return res.status(500).json("Error: Must verify email, check email")
+            
             const dbPassword = user.password
             bcrypt.compare(password, dbPassword).then((match) => {
-                if (!match) return res.status(400).json("Password does not match. Try again")
+                if (!match) return res.status(400).json("Error: Password does not match. Try again")
                 else {
                     const accessToken = createToken(user)
 
@@ -162,7 +165,7 @@ const verifyEmail = async (req, res) => {
     try {
         const emailToken = req.body.emailToken
         
-        if (!emailToken) return res.status(400).json("Email Token not found...")
+        if (!emailToken) return res.status(400).json("Error: Email Token not found...")
 
         const user = await User.findOne({ emailToken: emailToken })
         
@@ -180,15 +183,42 @@ const verifyEmail = async (req, res) => {
                 }
             })
         }
-        else return res.status(400).json("Email verification failed, invalid token")
+        else return res.status(400).json("Error: Email verification failed, invalid token")
     }
     catch(error) {
         return res.status(500).json({ message: error.message })
     }
 }
+
+const resendEmail = async (req, res) => {
+    try {
+        const email = req.body.email
+        if (!email) return res.status(400).json("Error: Email not found...")
+        
+        const user = await User.findOne({ email: email })
+        
+        if (user) {
+            sendVerificationEmail(user)
+            return res.status(200).json({ 
+                message: "Successfully sent verification email", 
+                user: {
+                    username: user.username,
+                    email: user.email,
+                    id: user._id
+                }
+            })
+        }
+        else return res.status(400).json("Error: Email did not send, email did not exist")
+    }
+    catch(error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
 module.exports = {
     registerUser,
     loginUser,
     getProfile,
-    verifyEmail
+    verifyEmail,
+    resendEmail
 }
